@@ -264,15 +264,16 @@ class Metadata(object):
                 is_compact = True
                 has_value = column_aliases or not cf_col_rows
                 clustering_size = num_column_name_components
-
-                # Some thrift tables define names in composite types (see PYTHON-192)
-                if not column_aliases and hasattr(comparator, 'fieldnames'):
-                    column_aliases = comparator.fieldnames
         else:
             is_compact = True
-            if column_aliases or not cf_col_rows:
+
+            # Unrecognized comparator types are used verbatim as the clustering column.
+            # Need to test directly in case the thrift CF also defines static index columns
+            # (which are not expressible in CQL as of C* 2.1.3).
+            # See PYTHON-213 for more background.
+            if column_aliases or not cf_col_rows or issubclass(comparator, (types._UnrecognizedType, types.DynamicCompositeType)):
                 has_value = True
-                clustering_size = num_column_name_components
+                clustering_size = 1
             else:
                 has_value = False
                 clustering_size = 0
@@ -336,6 +337,9 @@ class Metadata(object):
                 if value_alias is None and value_alias_rows:  # CASSANDRA-8487
                     # In 2.0+, we can use the 'type' column. In 3.0+, we have to use it.
                     value_alias = value_alias_rows[0].get('column_name')
+            # Sometimes a value is required, even though no alias is specified. If
+            # we 'has_value', use the default alias. PYTHON-213 for background.
+            value_alias = value_alias or "value"
 
             default_validator = row.get("default_validator")
             if default_validator:
@@ -344,8 +348,8 @@ class Metadata(object):
                 if value_alias_rows:  # CASSANDRA-8487
                     validator = types.lookup_casstype(value_alias_rows[0].get('validator'))
 
-            col = ColumnMetadata(table_meta, value_alias, validator)
-            if value_alias:  # CASSANDRA-8487
+            if value_alias and validator:  # CASSANDRA-8487
+                col = ColumnMetadata(table_meta, value_alias, validator)
                 table_meta.columns[value_alias] = col
 
         # other normal columns
@@ -932,10 +936,11 @@ class TableMetadata(object):
         """
         A boolean indicating if this table can be represented as CQL in export
         """
-        # no such thing as DCT in CQL
-        incompatible = issubclass(self.comparator, types.DynamicCompositeType)
         # no compact storage with more than one column beyond PK
-        incompatible |= self.is_compact_storage and len(self.columns) > len(self.primary_key) + 1
+        composite_primary = bool(self.clustering_key)
+        incompatible = self.is_compact_storage and composite_primary and len(self.columns) > len(self.primary_key) + 1
+
+        incompatible |= not all(is_valid_name(col.name) for col in self.columns.values())
 
         return not incompatible
 
@@ -997,8 +1002,10 @@ class TableMetadata(object):
             padding = ""
 
         columns = []
-        for col in self.columns.values():
-            columns.append("%s %s%s" % (protect_name(col.name), col.typestring, ' static' if col.is_static else ''))
+        # is_valid_name to avoid displaying columns for hex-encoded column metadata generated
+        # from incompatible thrift (PYTHON-213)
+        for col in [c for c in self.columns.values() if is_valid_name(c.name)]:
+                columns.append("%s %s%s" % (protect_name(col.name), col.typestring, ' static' if col.is_static else ''))
 
         if len(self.partition_key) == 1 and not self.clustering_key:
             columns[0] += " PRIMARY KEY"
@@ -1171,9 +1178,14 @@ class ColumnMetadata(object):
         or "map<string, int>".
         """
         if issubclass(self.data_type, types.ReversedType):
-            return self.data_type.subtypes[0].cql_parameterized_type()
+            typ = self.data_type.subtypes[0]
         else:
-            return self.data_type.cql_parameterized_type()
+            typ = self.data_type
+
+        if issubclass(typ, types._UnrecognizedType):
+            return "'%s'" % typ.cass_parameterized_type()
+        else:
+            return typ.cql_parameterized_type()
 
     def __str__(self):
         return "%s %s" % (self.name, self.data_type)
