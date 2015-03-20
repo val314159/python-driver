@@ -3,6 +3,7 @@ python: 2.7
 env:
   - TOX_ENV=py27 CASS_VER=12
   - TOX_ENV=py27 CASS_VER=20
+  - TOX_ENV=py27 CASS_VER=21
 
 before_install:
   - sudo apt-get update -y
@@ -22,14 +23,6 @@ before_install:
   - sudo rm -rf /var/lib/cassandra/*
   - sudo sh -c "echo 'JVM_OPTS=\"\${JVM_OPTS} -Djava.net.preferIPv4Stack=false\"' >> /etc/cassandra/cassandra-env.sh"
   - sudo service cassandra start
-  - sudo netstat -tnlp
-  - sudo service cassandra status
-  - sleep 5
-  - sudo netstat -tnlp
-  - sudo service cassandra status
-  - sleep 5
-  - sudo netstat -tnlp
-  - sudo service cassandra status
 
 install:
   - pip install tox
