@@ -1,7 +1,7 @@
 #import gevent.monkey;gevent.monkey.patch_all()
 
-#from tornado.platform.asyncio import AsyncIOMainLoop
-#AsyncIOMainLoop().install()
+from tornado.platform.asyncio import AsyncIOMainLoop
+AsyncIOMainLoop().install()
 
 from cassandra.cluster import Cluster
 
