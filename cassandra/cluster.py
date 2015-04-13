@@ -83,13 +83,21 @@ def _is_eventlet_monkey_patched():
 # the default because it's fastest. Otherwise, use asyncore.
 if 'gevent.monkey' in sys.modules:
     from cassandra.io.geventreactor import GeventConnection as DefaultConnection
+    print 'g'
 elif _is_eventlet_monkey_patched():
     from cassandra.io.eventletreactor import EventletConnection as DefaultConnection
+    print 'e'
 else:
     try:
         from cassandra.io.libevreactor import LibevConnection as DefaultConnection  # NOQA
+        print 'l'
     except ImportError:
-        from cassandra.io.asyncorereactor import AsyncoreConnection as DefaultConnection  # NOQA
+        try:
+            from cassandra.io.tornadoreactor import TornadoConnection as DefaultConnection # NOQA
+            print 't'
+        except ImportError:
+            from cassandra.io.asyncorereactor import AsyncoreConnection as DefaultConnection  # NOQA
+            print 'a'
 
 # Forces load of utf8 encoding module to avoid deadlock that occurs
 # if code that is being imported tries to import the module in a seperate
