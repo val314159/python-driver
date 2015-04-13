@@ -1,0 +1,6 @@
+backports.ssl-match-hostname==3.4.0.2
+blist==1.3.6
+certifi==14.5.14
+gevent==1.0.1
+greenlet==0.4.5
+tornado==4.1
