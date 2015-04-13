@@ -52,6 +52,7 @@ class GeventConnection(Connection):
 
     @classmethod
     def factory(cls, *args, **kwargs):
+        print "GFACTOR", (args,kwargs)
         timeout = kwargs.pop('timeout', 5.0)
         conn = cls(*args, **kwargs)
         conn.connected_event.wait(timeout)
@@ -64,6 +65,7 @@ class GeventConnection(Connection):
             return conn
 
     def __init__(self, *args, **kwargs):
+        print "GINIT", (args,kwargs)
         Connection.__init__(self, *args, **kwargs)
 
         self.connected_event = Event()
@@ -97,6 +99,7 @@ class GeventConnection(Connection):
         self._send_options_message()
 
     def close(self):
+        print "GCLOSE"
         with self.lock:
             if self.is_closed:
                 return
@@ -118,10 +121,12 @@ class GeventConnection(Connection):
             self.connected_event.set()
 
     def handle_close(self):
+        print "GH_CLOSE"
         log.debug("connection closed by server")
         self.close()
 
     def handle_write(self):
+        print "GH_WRITE"
         run_select = partial(select.select, (), (self._socket,), ())
         while True:
             try:
@@ -141,6 +146,7 @@ class GeventConnection(Connection):
                 return  # Leave the write loop
 
     def handle_read(self):
+        print "GH_READ"
         run_select = partial(select.select, (self._socket,), (), ())
         while True:
             try:
@@ -171,17 +177,20 @@ class GeventConnection(Connection):
                 return
 
     def push(self, data):
+        print "GPUSH"
         chunk_size = self.out_buffer_size
         for i in xrange(0, len(data), chunk_size):
             self._write_queue.put(data[i:i + chunk_size])
 
     def register_watcher(self, event_type, callback, register_timeout=None):
+        print "G_RW"
         self._push_watchers[event_type].add(callback)
         self.wait_for_response(
             RegisterMessage(event_list=[event_type]),
             timeout=register_timeout)
 
     def register_watchers(self, type_callback_dict, register_timeout=None):
+        print "G_RW2"
         for event_type, callback in type_callback_dict.items():
             self._push_watchers[event_type].add(callback)
         self.wait_for_response(
