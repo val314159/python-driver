@@ -180,7 +180,7 @@ class AsyncoreConnection(Connection, asyncore.dispatcher):
         self.deque_lock = Lock()
 
         self._loop.connection_created(self)
-
+        print "AAAA", (self.host, self.port)
         sockerr = None
         addresses = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM)
         for (af, socktype, proto, canonname, sockaddr) in addresses:
