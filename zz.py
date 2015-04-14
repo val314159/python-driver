@@ -1,15 +1,16 @@
-#!/usr/bin/python                                                                                                                                                                               
+#!/usr/bin/python
+
 from tornado.platform.asyncio import AsyncIOMainLoop
 AsyncIOMainLoop().install()
  
 import trollius as asyncio
 from trollius import From, Return
 loop = asyncio.get_event_loop()
- 
+
 import os,sys
  
-#from cassandra.cluster import Cluster                                                                                                                                                          
- 
+#from cassandra.cluster import Cluster
+
 hostname,port = '127.0.0.1',9042
 #hostname,port = '127.0.0.1',8888
  
@@ -25,10 +26,10 @@ class Conn(object):
     def __init__(_,host, port, loop):
         _.host,_.port = host,port
         run = asyncio.async(_.async_run())
-        if loop:
-            _.set_loop(loop)
-            _._loop.run_until_complete( run )
-            pass
+        #if loop:
+        _.set_loop(loop)
+        _._loop.run_until_complete( run )
+        asyncio.async( _.async_read_loop() )
         pass
  
     @asyncio.coroutine
@@ -38,17 +39,22 @@ class Conn(object):
         print "READ AND WRITE"
         _.reader, _.writer = reader, writer
 
+        print "<", repr(s)
         _.writer.write(s)
+        print "WAIT TO DRAIN"
+        yield From (_.writer.drain() )
+        print "DRAINED IT"
 
-        asyncio.async( _.async_read_loop() )
+        #asyncio.async( _.async_read_loop() )
         pass
  
     @asyncio.coroutine
     def async_read_loop(_):
         while True:
             print "READ IT 0"
-            line = yield From(_.reader.readline())
-            print "LINE", repr(line)
+            #print "READ IT 0", dir(_.reader)
+            line = yield From(_.reader.read(100))
+            print "LINE:", repr(line)
             if not line:
                 break
             pass

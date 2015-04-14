@@ -1,16 +1,4 @@
-import gevent.monkey;gevent.monkey.patch_all()
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#!/usr/bin/python
 import gevent
 from gevent import select, socket, ssl
 from gevent.event import Event
@@ -29,9 +17,17 @@ from cassandra import OperationTimedOut
 from cassandra.connection import Connection, ConnectionShutdown
 from cassandra.protocol import RegisterMessage
 
+#use_tornado=True
+#if use_tornado:
+#from tornado.platform.asyncio import AsyncIOMainLoop
+#AsyncIOMainLoop().install()
+#pass
+
+import trollius as asyncio
+from trollius import From, Return
+loop = asyncio.get_event_loop()
 
 log = logging.getLogger(__name__)
-
 
 def is_timeout(err):
     return (
@@ -40,9 +36,9 @@ def is_timeout(err):
     )
 
 
-class TornadoConnection(Connection):
+class AsyncIOConnection(Connection):
     """
-    An implementation of :class:`.Connection` that utilizes ``tornado``.
+    An implementation of :class:`.Connection` that utilizes ``asyncio``.
     """
 
     _total_reqd_bytes = 0
@@ -66,6 +62,38 @@ class TornadoConnection(Connection):
             return conn
             '''
         return conn
+
+
+
+    @asyncio.coroutine
+    def async_run(_):
+        _.connect = asyncio.open_connection(_.host,_.port)
+        reader, writer = yield From(_.connect)
+        print "READ AND WRITE"
+        _.reader, _.writer = reader, writer
+
+        print "<", repr(s)
+        _.writer.write(s)
+        print "WAIT TO DRAIN"
+        yield From (_.writer.drain() )
+        print "DRAINED IT"
+
+        #asyncio.async( _.async_read_loop() )
+        pass
+ 
+    @asyncio.coroutine
+    def async_read_loop(_):
+        while True:
+            print "READ IT 0"
+            #print "READ IT 0", dir(_.reader)
+            line = yield From(_.reader.read(100))
+            print "LINE:", repr(line)
+            if not line:
+                break
+            pass
+
+
+
     def __init__(self, *args, **kwargs):
         print "TINIT", (args,kwargs)
         Connection.__init__(self, *args, **kwargs)
@@ -95,6 +123,14 @@ class TornadoConnection(Connection):
         if self.sockopts:
             for args in self.sockopts:
                 self._socket.setsockopt(*args)
+
+
+
+        run = asyncio.async(_.async_run())
+        loop.run_until_complete( run )
+        asyncio.async( _.async_read_loop() )
+
+
 
         self._read_watcher = gevent.spawn(self.handle_read)
         self._write_watcher = gevent.spawn(self.handle_write)
