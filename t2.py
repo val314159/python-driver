@@ -6,7 +6,13 @@ AsyncIOMainLoop().install()
 from cassandra.cluster import Cluster
 
 cluster = Cluster()
+#try:
 session = cluster.connect('ks')
+#except:
+#    import traceback as tb
+#    print '22222'
+#    tb.print_exc()
+#    print '22222'
 
 print 'ok'
 

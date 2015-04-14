@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 from random import random
 import socket
-import sys
+import sys,traceback as tb
 import time
 from threading import Lock, RLock, Thread, Event
 
@@ -95,7 +95,20 @@ else:
     except ImportError:
         try:
             #from cassandra.io.tornadoreactor import TornadoConnection as DefaultConnection # NOQA
-            from cassandra.io.tr import AsyncIOConnection as DefaultConnection # NOQA
+            try:
+                from cassandra.io.tr import AsyncIOConnection as DefaultConnection # NOQA
+            except:
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                print "QQWQWQWQWQWQW"
+                pass
             print 't'
         except ImportError:
             from cassandra.io.asyncorereactor import AsyncoreConnection as DefaultConnection  # NOQA
@@ -743,11 +756,15 @@ class Cluster(object):
         is specified, that keyspace will be the default keyspace for
         operations on the ``Session``.
         """
+        print 'a1'
         with self._lock:
+            print 'a1'
             if self.is_shutdown:
                 raise Exception("Cluster is already shut down")
 
+            print 'a1'
             if not self._is_setup:
+                print 'a19'
                 log.debug("Connecting to cluster, contact points: %s; protocol version: %s",
                           self.contact_points, self.protocol_version)
                 self.connection_class.initialize_reactor()
@@ -759,27 +776,36 @@ class Cluster(object):
                         for listener in self.listeners:
                             listener.on_add(host)
 
+                print 'a29'
                 self.load_balancing_policy.populate(
                     weakref.proxy(self), self.metadata.all_hosts())
 
+                print 'a39'
                 try:
                     self.control_connection.connect()
                     log.debug("Control connection created")
                 except Exception:
+                    tb.print_exc()
                     log.exception("Control connection failed to connect, "
                                   "shutting down Cluster:")
                     self.shutdown()
                     raise
 
+                print 'a49'
                 self.load_balancing_policy.check_supported()
 
+                print 'a59'
                 if self.idle_heartbeat_interval:
                     self._idle_heartbeat = ConnectionHeartbeat(self.idle_heartbeat_interval, self.get_connection_holders)
                 self._is_setup = True
+                print 'a69'
 
+        print 'a200'
         session = self._new_session()
+        print 'a300'
         if keyspace:
             session.set_keyspace(keyspace)
+        print 'a400'
         return session
 
     def get_connection_holders(self):
@@ -1873,7 +1899,11 @@ class ControlConnection(object):
             return
 
         self._protocol_version = self._cluster.protocol_version
+        print '00001'
+        q = self._reconnect_internal()
+        print '00005', q
         self._set_new_connection(self._reconnect_internal())
+        print '00009'
 
     def _set_new_connection(self, conn):
         """
@@ -1896,17 +1926,26 @@ class ControlConnection(object):
         to the exception that was raised when an attempt was made to open
         a connection to that host.
         """
+        print "RI 0"
         errors = {}
+        print "RI 1"
+        import traceback
         for host in self._cluster.load_balancing_policy.make_query_plan():
+            print "RI 100"
             try:
                 return self._try_connect(host)
             except ConnectionException as exc:
+                print "ERR1"
+                traceback.print_exc()
                 errors[host.address] = exc
                 log.warning("[control connection] Error connecting to %s:", host, exc_info=True)
                 self._cluster.signal_connection_failure(host, exc, is_host_addition=False)
             except Exception as exc:
+                print "ERR2"
+                traceback.print_exc()
                 errors[host.address] = exc
                 log.warning("[control connection] Error connecting to %s:", host, exc_info=True)
+            print "RI 199"
 
         raise NoHostAvailable("Unable to connect to any servers", errors)
 

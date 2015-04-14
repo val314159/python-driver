@@ -86,10 +86,16 @@ class AsyncIOConnection(Connection):
         while True:
             print "READ IT 0"
             #print "READ IT 0", dir(_.reader)
-            line = yield From(_.reader.read(100))
+            line = yield From(_.reader.read(self.in_buffer_size))
             print "LINE:", repr(line)
             if not line:
                 break
+
+            buf = line
+            _._iobuf.write(buf)
+            if len(buf) < _.in_buffer_size:
+                break
+
             pass
 
 
@@ -126,9 +132,9 @@ class AsyncIOConnection(Connection):
 
 
 
-        run = asyncio.async(_.async_run())
+        run = asyncio.async(self.async_run())
         loop.run_until_complete( run )
-        asyncio.async( _.async_read_loop() )
+        asyncio.async( self.async_read_loop() )
 
 
 
