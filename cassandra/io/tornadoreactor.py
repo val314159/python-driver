@@ -132,6 +132,7 @@ class TornadoConnection(Connection):
             try:
                 next_msg = self._write_queue.get()
                 run_select()
+                print "GOT WRITE"
             except Exception as exc:
                 if not self.is_closed:
                     log.debug("Exception during write select() for %s: %s", self, exc)
@@ -139,6 +140,7 @@ class TornadoConnection(Connection):
                 return
 
             try:
+                print "NEXT MSG", repr(next_msg)
                 self._socket.sendall(next_msg)
             except socket.error as err:
                 log.debug("Exception during socket sendall for %s: %s", self, err)
@@ -151,6 +153,7 @@ class TornadoConnection(Connection):
         while True:
             try:
                 run_select()
+                print "GOT READ"
             except Exception as exc:
                 if not self.is_closed:
                     log.debug("Exception during read select() for %s: %s", self, exc)
@@ -160,6 +163,9 @@ class TornadoConnection(Connection):
             try:
                 while True:
                     buf = self._socket.recv(self.in_buffer_size)
+                    print("READ", len(buf), "BYTES")
+                    if len(buf) < 10:
+                        print(repr(buf))
                     self._iobuf.write(buf)
                     if len(buf) < self.in_buffer_size:
                         break
@@ -177,7 +183,7 @@ class TornadoConnection(Connection):
                 return
 
     def push(self, data):
-        print "TPUSH"
+        print "TPUSH", repr(data)
         chunk_size = self.out_buffer_size
         for i in xrange(0, len(data), chunk_size):
             self._write_queue.put(data[i:i + chunk_size])
