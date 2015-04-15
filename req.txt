@@ -1,0 +1,6 @@
+blist==1.3.6
+futures
+gevent==1.0.1
+greenlet==0.4.5
+six>=1.6
+trollius==1.0.4
