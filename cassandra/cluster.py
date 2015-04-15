@@ -78,6 +78,8 @@ def _is_eventlet_monkey_patched():
     import eventlet.patcher
     return eventlet.patcher.is_monkey_patched('socket')
 
+from cassandra.io.asyncioreactor import AsyncIOConnection as DefaultConnection
+'''
 # default to gevent when we are monkey patched with gevent, eventlet when
 # monkey patched with eventlet, otherwise if libev is available, use that as
 # the default because it's fastest. Otherwise, use asyncore.
@@ -90,7 +92,7 @@ else:
         from cassandra.io.libevreactor import LibevConnection as DefaultConnection  # NOQA
     except ImportError:
         from cassandra.io.asyncorereactor import AsyncoreConnection as DefaultConnection  # NOQA
-
+'''
 # Forces load of utf8 encoding module to avoid deadlock that occurs
 # if code that is being imported tries to import the module in a seperate
 # thread.

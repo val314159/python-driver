@@ -1,4 +1,4 @@
-#import gevent.monkey;gevent.monkey.patch_all()
+import gevent.monkey;gevent.monkey.patch_all()
 
 #from tornado.platform.asyncio import AsyncIOMainLoop
 #AsyncIOMainLoop().install()
