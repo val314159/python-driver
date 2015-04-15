@@ -1,7 +1,19 @@
-import gevent
-from gevent import select, socket, ssl
-from gevent.event import Event
-from gevent.queue import Queue
+#import gevent
+#from gevent import select, socket, ssl
+#from gevent.event import Event
+#from gevent.queue import Queue
+
+class Event(object):
+    def __init__(self):
+        print 'e.__init__'
+        self.clear()
+    def clear(self):
+        print 'e.clear'
+        self._is_set = False
+    def set(self):
+        print 'e.set'
+        self._is_set = True
+    pass
 
 from collections import defaultdict
 from functools import partial
@@ -41,6 +53,8 @@ class AsyncIOConnection(Connection):
     def factory(cls, *args, **kwargs):
         timeout = kwargs.pop('timeout', 5.0)
         conn = cls(*args, **kwargs)
+        print "BYBY"
+        return conn
         conn.connected_event.wait(timeout)
         if conn.last_error:
             raise conn.last_error
@@ -51,14 +65,15 @@ class AsyncIOConnection(Connection):
             return conn
 
     def __init__(self, *args, **kwargs):
+        self.outbuf = []
         Connection.__init__(self, *args, **kwargs)
 
         self.connected_event = Event()
-        self._write_queue = Queue()
+        #self._write_queue = Queue()
 
         self._callbacks = {}
         self._push_watchers = defaultdict(set)
-
+        '''
         sockerr = None
         addresses = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM)
         for (af, socktype, proto, canonname, sockaddr) in addresses:
@@ -81,9 +96,13 @@ class AsyncIOConnection(Connection):
 
         self._read_watcher = gevent.spawn(self.handle_read)
         self._write_watcher = gevent.spawn(self.handle_write)
+        '''
+        print "aaa 1"
         self._send_options_message()
+        print "aaa 2"
 
     def close(self):
+        print "_____ CLOSE"
         with self.lock:
             if self.is_closed:
                 return
@@ -158,9 +177,18 @@ class AsyncIOConnection(Connection):
                 return
 
     def push(self, data):
+        print "PUSHER0", len(data), repr(data)
+        if hasattr(self,'writer'):
+            self.writer.write(data)
+        else:
+            self.outbuf.append( data )
+            pass
+        '''
         chunk_size = self.out_buffer_size
         for i in xrange(0, len(data), chunk_size):
             self._write_queue.put(data[i:i + chunk_size])
+        '''
+        print "PUSHER9", data
 
     def register_watcher(self, event_type, callback, register_timeout=None):
         self._push_watchers[event_type].add(callback)
