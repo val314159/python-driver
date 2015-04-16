@@ -12,6 +12,7 @@ logging.basicConfig()
 
 ###########
 class AioLock(object):
+    @asyncio.coroutine
     def acquire  (_,blocking=1): print "acquire", blocking
     def release  (_):            print "release"
     def __enter__(_):            print "__enter__"
@@ -19,6 +20,7 @@ class AioLock(object):
     pass
 
 class AioRLock(object):
+    @asyncio.coroutine
     def acquire  (_,blocking=1): print "Racquire", blocking
     def release  (_):            print "Rrelease"
     def __enter__(_):            print "__Renter__"
@@ -26,32 +28,42 @@ class AioRLock(object):
     pass
 
 @asyncio.coroutine
-def mytask():
-    pass
-
 def aio_sleep(x):
     print "MY SLEEP"
     import time
     return time.old_sleep(x)
 
+class obj(object): pass
+
+_current = obj()
+_current.name = 'NONE'
+
+def get_current(): return _current
+
 class AioThread(object):
     def __init__(_, target, name):
-        print "THREAD", target, name
-        print '!!!!!'
-        loop.create_task( mytask() )
+        print "THREAD OFF", target, name
+        _.target, _.name = target, name
+        _.running = None
         pass
     def start(_):
-        print "START", _
+        _.running = loop.call_soon( _.target )
+        print "### _.running:", _.running
+        _.current = _
         pass
+    @asyncio.coroutine
     def join(_):
         print "JOIN"
         pass
+    def is_alive(_):
+        return True
     pass
 
 class AioEvent(object):
     def __init__(_): _.state = False
     def set(_): _.state = True
     def is_set(_): return _.state
+    @asyncio.coroutine
     def wait(_, timeout=None):
         while 1:
             print "WAIT"
@@ -64,10 +76,14 @@ class AioEvent(object):
 def aio_monkey_patch():
     print "monkey patch it------0",'.'*80
     import threading,time
+    '''
     threading.OldLock = threading.Lock
     threading.Lock   = AioLock
     threading.RLock  = threading.RLock
     threading.RLock  = AioRLock
+    '''
+    threading.currentThread = get_current
+    threading.current_thread = get_current
     threading.Thread = threading.Thread
     threading.Thread = AioThread
     threading.Event  = threading.Event
