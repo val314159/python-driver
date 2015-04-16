@@ -31,7 +31,7 @@ from threading import Lock, RLock, Thread, Event
 import six
 from six.moves import range
 from six.moves import queue as Queue
-
+print "QQ", Queue
 import weakref
 from weakref import WeakValueDictionary
 try:
@@ -1913,7 +1913,9 @@ class ControlConnection(object):
         node/token and schema metadata.
         """
         log.debug("[control connection] Opening new connection to %s", host)
+        print "TRYING TO CONNECT"
         connection = self._cluster.connection_factory(host.address, is_control_connection=True)
+        print "HEY IT WORKED"
 
         log.debug("[control connection] Established new connection %r, "
                   "registering watchers and refreshing schema and topology",
